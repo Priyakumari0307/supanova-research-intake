@@ -31,6 +31,12 @@ export interface SignalSources {
   granola_note: string | null;
   transcript: string | null;
   recording: string | null;
+  url?: string | null;
+  content?: string | null;
+  content_type?: string | null;
+  fetched_at?: string | null;
+  final_url?: string | null;
+  input_kind?: 'text' | 'url' | string;
 }
 
 export interface Signal {
