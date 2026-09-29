@@ -1,0 +1,74 @@
+export interface SignalStatus {
+  state: 'analyzed' | 'pending' | string;
+  analyzed_at: string | null;
+  files_reviewed: string[];
+  analysis_ref: string | null;
+}
+
+export interface SignalSources {
+  granola_note?: string | null;
+  transcript?: string | null;
+  recording?: string | null;
+  url?: string | null;
+  content?: string | null;
+  content_type?: string | null;
+  fetched_at?: string | null;
+  final_url?: string | null;
+  input_kind?: 'text' | 'url' | string;
+}
+
+export interface Signal {
+  id: string;
+  match_key: string;
+  type: string;
+  date: string;
+  time: string;
+  title: string;
+  detected_on: string;
+  attendees: string[];
+  projects: string[];
+  summary: string | null;
+  expected_files: string[];
+  notes: string | null;
+  status: Record<string, SignalStatus>;
+  sources: SignalSources;
+}
+
+export type RoutingOutcome = 'MATCHED' | 'UNROUTED' | 'AMBIGUOUS';
+
+export interface MatchEvidence {
+  source: 'routing_hint' | 'project_config';
+  matchType: 'domain' | 'keyword';
+  matchedTerm: string;
+  projectId: string;
+}
+
+export interface InvalidHintEncountered {
+  hint: {
+    type: string;
+    match: string;
+    project: string;
+    note?: string;
+  };
+  reason: string;
+  referencedProjectId: string;
+}
+
+export interface RoutingInput {
+  text?: string;
+  url?: string;
+  title?: string;
+}
+
+export interface RoutingResult {
+  outcome: RoutingOutcome;
+  projectId: string;
+  matchedProjectId: string | null;
+  candidateProjects: string[];
+  isAmbiguous: boolean;
+  matchMethod: string;
+  evidence: MatchEvidence[];
+  invalidHints: InvalidHintEncountered[];
+  fallbackApplied: boolean;
+  diagnostics: string[];
+}
