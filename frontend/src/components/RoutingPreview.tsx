@@ -1,10 +1,32 @@
 import React from 'react';
 import { RoutingResult, MatchEvidence } from '../types/api.types';
-import { CheckCircle2, AlertTriangle, HelpCircle, X, ShieldAlert, Tag, ArrowRight } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  HelpCircle,
+  X,
+  ShieldAlert,
+  Tag,
+  ArrowRight,
+  Plus,
+  Loader2,
+  Link2,
+  FileText,
+  AlertCircle,
+} from 'lucide-react';
 
 interface RoutingPreviewProps {
   result: RoutingResult | null;
+  inputType: 'url' | 'note';
+  inputPayload: {
+    url?: string;
+    text?: string;
+    title?: string;
+  };
   onClear: () => void;
+  onCreate: () => void;
+  isCreating: boolean;
+  creationError: string | null;
 }
 
 function getProjectBadgeStyle(projectId: string): string {
@@ -44,56 +66,104 @@ function formatMatchMethod(method: string): string {
   }
 }
 
-export const RoutingPreview: React.FC<RoutingPreviewProps> = ({ result, onClear }) => {
+export const RoutingPreview: React.FC<RoutingPreviewProps> = ({
+  result,
+  inputType,
+  inputPayload,
+  onClear,
+  onCreate,
+  isCreating,
+  creationError,
+}) => {
   if (!result) return null;
 
   const isMatched = result.outcome === 'MATCHED';
   const isAmbiguous = result.outcome === 'AMBIGUOUS';
   const isUnrouted = result.outcome === 'UNROUTED';
 
+  const displayTitle = inputPayload.title?.trim() || '(Title will be auto-derived by server)';
+
   return (
-    <div className="rounded-lg border border-slate-700/80 bg-[#0d131f] p-5 flex flex-col gap-4 shadow-md transition-all">
+    <div className="rounded-lg border border-slate-700/80 bg-[#0d131f] p-5 flex flex-col gap-5 shadow-lg transition-all">
       {/* Header Row */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold">
+            Signal Review
+          </span>
+          <span className="text-slate-600 text-xs">&bull;</span>
           {isMatched && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <CheckCircle2 className="w-3 h-3" />
               <span>Project Matched</span>
             </span>
           )}
           {isAmbiguous && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-              <AlertTriangle className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+              <AlertTriangle className="w-3 h-3" />
               <span>Ambiguous Match</span>
             </span>
           )}
           {isUnrouted && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-slate-500/15 text-slate-300 border border-slate-500/30">
-              <HelpCircle className="w-3.5 h-3.5" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-500/15 text-slate-300 border border-slate-500/30">
+              <HelpCircle className="w-3 h-3" />
               <span>No Match (Fallback)</span>
             </span>
           )}
-
-          <span className="text-xs text-slate-400 font-mono">Routing preview result</span>
         </div>
 
         <button
           type="button"
           onClick={onClear}
-          className="text-slate-400 hover:text-slate-200 p-1 rounded hover:bg-slate-800/60 transition-colors"
+          disabled={isCreating}
+          className="text-slate-400 hover:text-slate-200 p-1 rounded hover:bg-slate-800/60 transition-colors cursor-pointer disabled:opacity-50"
           title="Dismiss preview"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Main Routing Details */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Assigned Project */}
+      {/* Review Payload Card */}
+      <div className="rounded border border-slate-800 bg-[#090d14] p-4 flex flex-col gap-3 text-xs">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] uppercase">
+              {inputType === 'url' ? (
+                <>
+                  <Link2 className="w-3 h-3 text-indigo-400" />
+                  <span>URL Intake</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-3 h-3 text-indigo-400" />
+                  <span>Note Intake</span>
+                </>
+              )}
+            </span>
+            <span className="font-semibold text-slate-200 text-sm">{displayTitle}</span>
+          </div>
+        </div>
+
+        {inputType === 'url' && inputPayload.url && (
+          <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px] bg-slate-900/60 border border-slate-800/80 rounded px-2.5 py-1.5 break-all">
+            <span className="text-slate-500 select-none">Source URL:</span>
+            <span className="text-indigo-300">{inputPayload.url}</span>
+          </div>
+        )}
+
+        {inputType === 'note' && inputPayload.text && (
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded p-2.5 text-slate-300 text-[11px] whitespace-pre-wrap max-h-32 overflow-y-auto leading-relaxed font-sans">
+            {inputPayload.text}
+          </div>
+        )}
+      </div>
+
+      {/* Routing Analysis Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Assigned Target Project */}
         <div className="bg-[#090d14] border border-slate-800/80 rounded p-3 flex flex-col gap-1.5">
           <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">
-            Assigned Project
+            Target Project Assignment
           </span>
           <div className="flex items-center gap-2">
             <span
@@ -137,8 +207,8 @@ export const RoutingPreview: React.FC<RoutingPreviewProps> = ({ result, onClear 
             ))}
           </div>
           <span className="text-slate-400 text-[11px]">
-            Because multiple projects matched, the signal is safely assigned to{' '}
-            <code className="font-mono text-amber-300">{result.projectId}</code> until reviewed.
+            Because multiple projects matched, the signal will be routed to{' '}
+            <code className="font-mono text-amber-300">{result.projectId}</code> for human triage.
           </span>
         </div>
       )}
@@ -182,9 +252,52 @@ export const RoutingPreview: React.FC<RoutingPreviewProps> = ({ result, onClear 
         </div>
       )}
 
-      {/* Disclaimer Banner */}
-      <div className="text-[11px] text-slate-500 border-t border-slate-800/80 pt-2 flex items-center justify-between">
-        <span>Preview only: No signal has been created and the ledger is untouched.</span>
+      {/* Creation Error Banner if failed */}
+      {creationError && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded bg-rose-950/30 border border-rose-800/50 text-xs text-rose-300">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          <span>{creationError}</span>
+        </div>
+      )}
+
+      {/* Confirmation & Guarded Write Action */}
+      <div className="border-t border-slate-800/80 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col gap-0.5 text-xs text-slate-400 max-w-md">
+          <span className="font-medium text-slate-300">Ready to commit to inbox?</span>
+          <span className="text-[11px] text-slate-500 leading-normal">
+            Clicking &quot;Add to inbox&quot; will write this signal to the local ledger (
+            <code className="font-mono text-slate-400">signal-ledger.json</code>) and record an audit entry.
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={isCreating}
+            className="px-3 py-2 rounded-md border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-xs font-medium text-slate-300 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onCreate}
+            disabled={isCreating}
+            className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-medium text-xs px-4 py-2 rounded-md transition-colors shadow-sm cursor-pointer"
+          >
+            {isCreating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Writing to ledger...</span>
+              </>
+            ) : (
+              <>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add to inbox</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

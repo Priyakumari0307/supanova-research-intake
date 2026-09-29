@@ -4,9 +4,17 @@ import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { RoutingPreview } from '@/components/RoutingPreview';
 import { RecentSignals } from '@/components/RecentSignals';
-import { evaluateRouting } from '@/lib/api';
+import { evaluateRouting, createSignal } from '@/lib/api';
 import { RoutingResult } from '@/types/api.types';
-import { Link2, FileText, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import {
+  Link2,
+  FileText,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  X,
+} from 'lucide-react';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'url' | 'note'>('url');
@@ -19,8 +27,22 @@ export default function HomePage() {
   const [previewResult, setPreviewResult] = useState<RoutingResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
+  // Signal creation states
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [creationSuccess, setCreationSuccess] = useState<{
+    id: string;
+    project: string;
+    title: string;
+  } | null>(null);
+
+  // Trigger for refreshing the Recent Signals list
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const handlePreview = async () => {
     setPreviewError(null);
+    setCreationError(null);
+    setCreationSuccess(null);
 
     const targetUrl = activeTab === 'url' ? urlInput.trim() : '';
     const targetText = activeTab === 'note' ? textInput.trim() : '';
@@ -54,6 +76,50 @@ export default function HomePage() {
   const handleClearPreview = () => {
     setPreviewResult(null);
     setPreviewError(null);
+    setCreationError(null);
+  };
+
+  const handleCreateSignal = async () => {
+    if (!previewResult) return;
+
+    setCreationError(null);
+    setIsCreating(true);
+
+    const targetUrl = activeTab === 'url' ? urlInput.trim() : '';
+    const targetText = activeTab === 'note' ? textInput.trim() : '';
+    const targetTitle = titleInput.trim();
+
+    try {
+      const result = await createSignal({
+        url: targetUrl || undefined,
+        text: targetText || undefined,
+        title: targetTitle || undefined,
+      });
+
+      if (result.status === 'created' && result.signal) {
+        setCreationSuccess({
+          id: result.signal.id,
+          project: result.signal.projects[0] || 'internal_unsorted',
+          title: result.signal.title,
+        });
+
+        // Reset form inputs & clear preview state
+        setUrlInput('');
+        setTextInput('');
+        setTitleInput('');
+        setPreviewResult(null);
+        setPreviewError(null);
+
+        // Increment refreshKey to trigger RecentSignals reload
+        setRefreshKey((k) => k + 1);
+      } else {
+        setCreationError(result.error || 'Failed to commit signal to ledger.');
+      }
+    } catch (err: any) {
+      setCreationError(err.message || 'Failed to commit signal to backend.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -190,7 +256,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={handlePreview}
-                disabled={isEvaluating}
+                disabled={isEvaluating || isCreating}
                 className="inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-medium text-xs px-4 py-2 rounded-md transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
               >
                 {isEvaluating ? (
@@ -209,9 +275,48 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Routing Preview Component (rendered when previewResult is present) */}
+        {/* Signal Creation Success Banner */}
+        {creationSuccess && (
+          <div className="rounded-lg border border-emerald-500/40 bg-emerald-950/20 p-4 flex items-start justify-between gap-3 text-xs text-emerald-300 animate-in fade-in duration-200">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-emerald-200">
+                  Signal successfully added to inbox &amp; committed to ledger!
+                </span>
+                <div className="flex items-center gap-2 flex-wrap text-[11px] text-emerald-300/90 font-mono">
+                  <span>ID: {creationSuccess.id}</span>
+                  <span>&bull;</span>
+                  <span>Project: {creationSuccess.project}</span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreationSuccess(null)}
+              className="text-emerald-400/80 hover:text-emerald-200 p-0.5 rounded cursor-pointer"
+              title="Dismiss notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Routing Preview / Review Component (rendered when previewResult is present) */}
         {previewResult && (
-          <RoutingPreview result={previewResult} onClear={handleClearPreview} />
+          <RoutingPreview
+            result={previewResult}
+            inputType={activeTab}
+            inputPayload={{
+              url: activeTab === 'url' ? urlInput.trim() : undefined,
+              text: activeTab === 'note' ? textInput.trim() : undefined,
+              title: titleInput.trim() || undefined,
+            }}
+            onClear={handleClearPreview}
+            onCreate={handleCreateSignal}
+            isCreating={isCreating}
+            creationError={creationError}
+          />
         )}
 
         {/* Compact How Routing Works Section */}
@@ -242,7 +347,7 @@ export default function HomePage() {
         </section>
 
         {/* Live Recent Signals Stream from Backend */}
-        <RecentSignals />
+        <RecentSignals refreshKey={refreshKey} />
       </main>
 
       {/* Footer */}

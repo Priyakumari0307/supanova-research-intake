@@ -32,7 +32,11 @@ function deriveSignalState(signal: Signal): string {
   return 'pending';
 }
 
-export const RecentSignals: React.FC = () => {
+interface RecentSignalsProps {
+  refreshKey?: number;
+}
+
+export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +56,7 @@ export const RecentSignals: React.FC = () => {
 
   useEffect(() => {
     loadSignals();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <section className="flex flex-col gap-3">

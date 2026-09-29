@@ -72,3 +72,17 @@ export interface RoutingResult {
   fallbackApplied: boolean;
   diagnostics: string[];
 }
+
+export interface CreateSignalInput {
+  text?: string;
+  url?: string;
+  title?: string;
+  notes?: string | null;
+}
+
+export interface CreateSignalResult {
+  status: 'created' | 'error';
+  signal?: Signal;
+  routing?: RoutingResult;
+  error?: string;
+}
