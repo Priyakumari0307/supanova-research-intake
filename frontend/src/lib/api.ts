@@ -4,6 +4,7 @@ import {
   RoutingResult,
   CreateSignalInput,
   CreateSignalResult,
+  CandidateWorkPreviewResponse,
 } from '../types/api.types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
@@ -133,3 +134,43 @@ export async function createSignal(input: CreateSignalInput): Promise<CreateSign
     );
   }
 }
+
+/**
+ * Previews candidate work items for a given signal via POST /api/candidate-work/preview.
+ * Stateless read-only calculation, does not commit or persist work items.
+ */
+export async function previewCandidateWork(
+  signalId: string
+): Promise<import('../types/api.types').CandidateWorkPreviewResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/api/candidate-work/preview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ signal_id: signalId }),
+    });
+
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status} ${res.statusText}`;
+      try {
+        const errorJson = await res.json();
+        if (errorJson.message) errorMsg = errorJson.message;
+      } catch {
+        // ignore parse error
+      }
+      throw new ApiError(errorMsg, res.status);
+    }
+
+    const data = (await res.json()) as import('../types/api.types').CandidateWorkPreviewResponse;
+    return data;
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(
+      `Failed to preview candidate work: ${err.message || 'Could not connect to backend.'}`,
+      0
+    );
+  }
+}
+

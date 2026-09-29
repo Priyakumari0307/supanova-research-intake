@@ -1,0 +1,209 @@
+import React from 'react';
+import { CandidateWorkItem } from '../types/api.types';
+import {
+  Sparkles,
+  X,
+  AlertCircle,
+  Loader2,
+  FileCheck2,
+  Quote,
+  ShieldCheck,
+  Inbox,
+  Clock,
+} from 'lucide-react';
+
+interface CandidateWorkPreviewProps {
+  signalId: string;
+  signalTitle?: string;
+  candidates: CandidateWorkItem[] | null;
+  isLoading: boolean;
+  error: string | null;
+  onClose: () => void;
+}
+
+function getProjectBadgeStyle(projectId: string): string {
+  switch (projectId) {
+    case 'northwind':
+      return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+    case 'harborline':
+      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+    case 'atlas':
+      return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
+    case 'quill':
+      return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+    case 'studio_ops':
+      return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30';
+    case 'internal_unsorted':
+    default:
+      return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+  }
+}
+
+export const CandidateWorkPreview: React.FC<CandidateWorkPreviewProps> = ({
+  signalId,
+  signalTitle,
+  candidates,
+  isLoading,
+  error,
+  onClose,
+}) => {
+  return (
+    <div className="rounded-lg border border-slate-700/80 bg-[#0d131f] p-4 sm:p-5 flex flex-col gap-4 shadow-lg animate-in fade-in duration-200">
+      {/* Header Row */}
+      <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+              <Sparkles className="w-3 h-3 text-indigo-400" />
+              <span>Candidate Work</span>
+            </span>
+            <span className="text-slate-600 text-xs">&bull;</span>
+            <span className="text-xs font-mono text-slate-400 truncate max-w-sm sm:max-w-md">
+              {signalTitle || signalId}
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            Signal: <code className="font-mono text-slate-300">{signalId}</code>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-slate-400 hover:text-slate-200 p-1 rounded hover:bg-slate-800/60 transition-colors cursor-pointer"
+          title="Close candidate preview"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* AI Assistance / Non-Committed Work Notice */}
+      <div className="rounded border border-amber-500/20 bg-amber-950/10 p-3 flex items-start gap-2.5 text-xs text-amber-300/90 leading-relaxed">
+        <Clock className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+        <div className="flex flex-col gap-0.5">
+          <span className="font-semibold text-amber-200">Draft suggestions for review</span>
+          <span className="text-[11px] text-slate-400">
+            These work candidates are generated suggestions extracted directly from source text evidence.
+            They are <span className="text-amber-300 font-medium">NOT committed work items yet</span> and require human review.
+          </span>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="py-8 flex flex-col items-center justify-center gap-2.5 text-slate-400">
+          <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+          <span className="text-xs font-mono">Analyzing signal source content for actionable work...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {!isLoading && error && (
+        <div className="rounded border border-rose-800/40 bg-rose-950/20 p-3.5 flex items-start gap-2 text-xs text-rose-300">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold">Failed to preview candidate work:</span>
+            <span className="text-slate-300 text-[11px]">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State: No Actionable Work Detected */}
+      {!isLoading && !error && candidates && candidates.length === 0 && (
+        <div className="rounded border border-slate-800 bg-[#090d14] p-6 flex flex-col items-center justify-center gap-2 text-center text-slate-400">
+          <Inbox className="w-6 h-6 text-slate-600" />
+          <span className="text-xs font-medium text-slate-300">No candidate work items detected</span>
+          <span className="text-[11px] text-slate-500 max-w-md leading-relaxed">
+            This signal did not contain explicit actionable language (such as &quot;we should investigate...&quot; or &quot;action item:...&quot;).
+            No ungrounded items were invented.
+          </span>
+        </div>
+      )}
+
+      {/* Candidate List */}
+      {!isLoading && !error && candidates && candidates.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-medium text-slate-300">
+              Found {candidates.length} candidate {candidates.length === 1 ? 'item' : 'items'}
+            </span>
+            <span className="text-[11px] font-mono text-slate-500">
+              Status: DRAFT SUGGESTION
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {candidates.map((candidate, idx) => (
+              <div
+                key={candidate.id || idx}
+                className="rounded border border-slate-800 bg-[#090d14] p-4 flex flex-col gap-3 text-xs"
+              >
+                {/* Candidate Header Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-800 text-slate-300 border border-slate-700/60 uppercase">
+                      <FileCheck2 className="w-3 h-3 text-indigo-400" />
+                      <span>Draft suggestion</span>
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono border ${getProjectBadgeStyle(
+                        candidate.project_id
+                      )}`}
+                    >
+                      {candidate.project_id}
+                    </span>
+                    <span className="text-slate-500 text-[10px] font-mono">
+                      {Math.round(candidate.confidence * 100)}% confidence
+                    </span>
+                  </div>
+
+                  <span className="font-mono text-[10px] text-slate-500 truncate">
+                    {candidate.id}
+                  </span>
+                </div>
+
+                {/* Candidate Title & Description */}
+                <div className="flex flex-col gap-1">
+                  <h3 className="font-semibold text-slate-200 text-sm">
+                    {candidate.title}
+                  </h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    {candidate.description}
+                  </p>
+                </div>
+
+                {/* Evidence Excerpt */}
+                {candidate.evidence && candidate.evidence.length > 0 && (
+                  <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-800/80">
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      <Quote className="w-3 h-3 text-indigo-400" />
+                      <span className="font-mono uppercase tracking-wider text-[10px]">
+                        Source Evidence ({candidate.evidence.length})
+                      </span>
+                      {candidate.is_grounded && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono ml-auto">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>Grounded in text</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {candidate.evidence.map((ev, evIdx) => (
+                        <blockquote
+                          key={evIdx}
+                          className="bg-slate-900/80 border-l-2 border-indigo-500/50 rounded-r px-2.5 py-1.5 text-[11px] text-slate-300 font-sans italic"
+                        >
+                          &ldquo;{ev}&rdquo;
+                        </blockquote>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

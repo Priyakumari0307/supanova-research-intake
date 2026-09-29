@@ -86,3 +86,27 @@ export interface CreateSignalResult {
   routing?: RoutingResult;
   error?: string;
 }
+
+export type CandidateWorkItemStatus = 'DRAFT' | 'APPROVED' | 'REJECTED';
+
+export interface CandidateWorkItem {
+  id: string;
+  signal_id: string;
+  title: string;
+  description: string;
+  evidence: string[];
+  project_id: string;
+  status: CandidateWorkItemStatus;
+  confidence: number;
+  is_grounded: boolean;
+  created_at?: string;
+  updated_at?: string;
+  reviewer_notes?: string | null;
+}
+
+export interface CandidateWorkPreviewResponse {
+  status: 'preview';
+  signal_id: string;
+  candidates: CandidateWorkItem[];
+}
+

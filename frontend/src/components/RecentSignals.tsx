@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Signal } from '../types/api.types';
-import { fetchSignals } from '../lib/api';
-import { Loader2, AlertCircle, RefreshCw, Layers } from 'lucide-react';
+import { Signal, CandidateWorkItem } from '../types/api.types';
+import { fetchSignals, previewCandidateWork } from '../lib/api';
+import { CandidateWorkPreview } from './CandidateWorkPreview';
+import { Loader2, AlertCircle, RefreshCw, Layers, Sparkles } from 'lucide-react';
 
 function getProjectBadgeStyle(projectId: string): string {
   switch (projectId) {
@@ -41,6 +42,12 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Candidate work preview state
+  const [activeSignal, setActiveSignal] = useState<{ id: string; title: string } | null>(null);
+  const [candidates, setCandidates] = useState<CandidateWorkItem[] | null>(null);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState<boolean>(false);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
+
   const loadSignals = async () => {
     setIsLoading(true);
     setError(null);
@@ -57,6 +64,36 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
   useEffect(() => {
     loadSignals();
   }, [refreshKey]);
+
+  const handlePreviewCandidateWork = async (signal: Signal) => {
+    // If clicking the currently active signal that is already loaded, toggle off
+    if (activeSignal?.id === signal.id && candidates !== null && !isLoadingCandidates) {
+      setActiveSignal(null);
+      setCandidates(null);
+      setCandidateError(null);
+      return;
+    }
+
+    setActiveSignal({ id: signal.id, title: signal.title || 'Untitled Signal' });
+    setIsLoadingCandidates(true);
+    setCandidateError(null);
+    setCandidates(null);
+
+    try {
+      const result = await previewCandidateWork(signal.id);
+      setCandidates(result.candidates || []);
+    } catch (err: any) {
+      setCandidateError(err.message || 'Could not generate candidate work preview.');
+    } finally {
+      setIsLoadingCandidates(false);
+    }
+  };
+
+  const handleCloseCandidatePreview = () => {
+    setActiveSignal(null);
+    setCandidates(null);
+    setCandidateError(null);
+  };
 
   return (
     <section className="flex flex-col gap-3">
@@ -82,6 +119,18 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
           <span className="font-mono text-[11px]">Refresh</span>
         </button>
       </div>
+
+      {/* Candidate Work Preview Panel (Rendered when a signal is active) */}
+      {activeSignal && (
+        <CandidateWorkPreview
+          signalId={activeSignal.id}
+          signalTitle={activeSignal.title}
+          candidates={candidates}
+          isLoading={isLoadingCandidates}
+          error={candidateError}
+          onClose={handleCloseCandidatePreview}
+        />
+      )}
 
       {/* Loading State */}
       {isLoading && (
@@ -122,17 +171,28 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
         </div>
       )}
 
-      {/* Signal Rows (Showing latest 10 signals) */}
+      {/* Signal Rows (Showing latest 10 signals, newest first) */}
       {!isLoading && !error && signals.length > 0 && (
         <div className="rounded-lg border border-slate-800 bg-[#0f1724] overflow-hidden divide-y divide-slate-800/80 text-xs shadow-sm">
-          {signals.slice(0, 10).map((signal) => {
-            const project = signal.projects?.[0] || 'internal_unsorted';
-            const state = deriveSignalState(signal);
+          {[...signals]
+            .reverse()
+            .sort((a, b) => {
+              const keyA = `${a.date || a.detected_on || ''} ${a.time || ''}`;
+              const keyB = `${b.date || b.detected_on || ''} ${b.time || ''}`;
+              return keyB.localeCompare(keyA);
+            })
+            .slice(0, 10)
+            .map((signal) => {
+              const project = signal.projects?.[0] || 'internal_unsorted';
+              const state = deriveSignalState(signal);
+              const isSelected = activeSignal?.id === signal.id;
 
             return (
               <div
                 key={signal.id}
-                className="p-3.5 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-800/25 transition-colors"
+                className={`p-3.5 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors ${
+                  isSelected ? 'bg-indigo-950/20 border-l-2 border-indigo-500' : 'hover:bg-slate-800/25'
+                }`}
               >
                 <div className="flex flex-col gap-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -155,7 +215,7 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0 text-slate-400 text-xs self-start sm:self-auto">
+                <div className="flex items-center gap-3 shrink-0 text-slate-400 text-xs self-start sm:self-auto flex-wrap">
                   <span className="text-slate-500 font-mono text-[11px]">
                     {signal.date || signal.detected_on}
                   </span>
@@ -170,6 +230,31 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
                   >
                     {state}
                   </span>
+
+                  {/* Explicit Candidate Work Preview Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => handlePreviewCandidateWork(signal)}
+                    disabled={isLoadingCandidates && isSelected}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-medium transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-500'
+                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/70'
+                    }`}
+                    title="Preview candidate work items extracted from this signal"
+                  >
+                    {isLoadingCandidates && isSelected ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin text-indigo-300" />
+                        <span className="text-[11px]">Analyzing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3 text-indigo-400" />
+                        <span className="text-[11px]">Candidate work</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             );
@@ -179,3 +264,4 @@ export const RecentSignals: React.FC<RecentSignalsProps> = ({ refreshKey }) => {
     </section>
   );
 };
+
