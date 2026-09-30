@@ -5,6 +5,7 @@ import { signalsRouter } from './routes/signals.router';
 import { configRouter } from './routes/config.router';
 import { routingRouter } from './routes/routing.router';
 import { candidateWorkRouter } from './routes/candidate-work.router';
+import { candidateReviewRouter } from './routes/candidate-review.router';
 import { FixtureError } from './services/fixture.service';
 
 export const app = express();
@@ -27,6 +28,7 @@ app.use('/api/signals', signalsRouter);
 app.use('/api/routing-config', configRouter);
 app.use('/api/routing', routingRouter);
 app.use('/api/candidate-work', candidateWorkRouter);
+app.use('/api/candidate-work', candidateReviewRouter);
 
 // Centralized error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

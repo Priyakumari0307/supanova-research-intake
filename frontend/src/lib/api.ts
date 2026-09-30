@@ -5,6 +5,8 @@ import {
   CreateSignalInput,
   CreateSignalResult,
   CandidateWorkPreviewResponse,
+  CandidateReviewDecision,
+  ReviewDecision,
 } from '../types/api.types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
@@ -141,7 +143,7 @@ export async function createSignal(input: CreateSignalInput): Promise<CreateSign
  */
 export async function previewCandidateWork(
   signalId: string
-): Promise<import('../types/api.types').CandidateWorkPreviewResponse> {
+): Promise<CandidateWorkPreviewResponse> {
   try {
     const res = await fetch(`${API_BASE}/api/candidate-work/preview`, {
       method: 'POST',
@@ -163,7 +165,7 @@ export async function previewCandidateWork(
       throw new ApiError(errorMsg, res.status);
     }
 
-    const data = (await res.json()) as import('../types/api.types').CandidateWorkPreviewResponse;
+    const data = (await res.json()) as CandidateWorkPreviewResponse;
     return data;
   } catch (err: any) {
     if (err instanceof ApiError) throw err;
@@ -173,4 +175,53 @@ export async function previewCandidateWork(
     );
   }
 }
+
+/**
+ * Submits an explicit human review decision (APPROVED or REJECTED) for a candidate work item
+ * via POST /api/candidate-work/:candidateId/review.
+ *
+ * Security & Data-Integrity Rule:
+ * The browser sends ONLY the decision and optional reviewer_notes.
+ * It does NOT send candidate identity, signal identity, evidence, project, confidence, review id, or timestamp.
+ */
+export async function submitCandidateReview(
+  candidateId: string,
+  decision: ReviewDecision,
+  reviewerNotes?: string
+): Promise<CandidateReviewDecision> {
+  try {
+    const res = await fetch(`${API_BASE}/api/candidate-work/${encodeURIComponent(candidateId)}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        decision,
+        reviewer_notes: reviewerNotes ? reviewerNotes.trim() : undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status} ${res.statusText}`;
+      try {
+        const errorJson = await res.json();
+        if (errorJson.message) errorMsg = errorJson.message;
+      } catch {
+        // ignore parse error
+      }
+      throw new ApiError(errorMsg, res.status);
+    }
+
+    const data = (await res.json()) as CandidateReviewDecision;
+    return data;
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(
+      `Failed to submit candidate review: ${err.message || 'Could not connect to backend.'}`,
+      0
+    );
+  }
+}
+
 

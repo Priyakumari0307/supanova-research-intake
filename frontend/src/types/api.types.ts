@@ -110,3 +110,16 @@ export interface CandidateWorkPreviewResponse {
   candidates: CandidateWorkItem[];
 }
 
+export type ReviewDecision = 'APPROVED' | 'REJECTED';
+
+export interface CandidateReviewDecision {
+  id: string;
+  candidate_work_id: string;
+  signal_id: string;
+  decision: ReviewDecision;
+  reviewer_notes?: string | null;
+  decided_at: string;
+}
+
+export type CandidateReviewResponse = CandidateReviewDecision;
+
