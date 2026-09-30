@@ -122,4 +122,5 @@ export interface CandidateReviewDecision {
 }
 
 export type CandidateReviewResponse = CandidateReviewDecision;
+export type CandidateReviewListResponse = CandidateReviewDecision[];
 

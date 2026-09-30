@@ -224,4 +224,42 @@ export async function submitCandidateReview(
   }
 }
 
+/**
+ * Fetches all persisted human candidate review decisions via GET /api/candidate-work/reviews.
+ */
+export async function fetchCandidateReviews(): Promise<CandidateReviewDecision[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/candidate-work/reviews`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status} ${res.statusText}`;
+      try {
+        const errorJson = await res.json();
+        if (errorJson.message) errorMsg = errorJson.message;
+      } catch {
+        // ignore parse error
+      }
+      throw new ApiError(errorMsg, res.status);
+    }
+
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      throw new ApiError('Malformed response: expected an array of candidate review decisions.', 500);
+    }
+
+    return data as CandidateReviewDecision[];
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(
+      `Failed to fetch candidate reviews: ${err.message || 'Could not connect to backend.'}`,
+      0
+    );
+  }
+}
+
 
